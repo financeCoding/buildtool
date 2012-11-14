@@ -1,0 +1,7 @@
+name:  buildtool
+description:  A simple build system for Dart.
+
+dependencies:
+  args: { sdk: args }
+  unittest: { sdk: unittest }
+  web_components: any
