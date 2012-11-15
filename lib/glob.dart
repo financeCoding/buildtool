@@ -13,6 +13,7 @@ library glob;
  *   * '*' matches one or more characters except '/'
  *   * '?' matches exactly one character except '/'
  *   * '**' matches one or more characters including '/'
+
  */
 class Glob implements Pattern {
   final regex;
