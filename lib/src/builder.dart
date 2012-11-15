@@ -44,6 +44,10 @@ class Builder {
     
     _logger.info("Starting build...");
     
+//    if (changedFiles.isEmpty && removedFiles.isEmpty) {
+//      changedFiles = _getAllFiles();
+//    }
+    
     // ignore inputs in the ouput dir that the Editor forwards
     var filteredFiles = 
         changedFiles.filter((f) => !f.startsWith(outDir.toString()));
@@ -69,6 +73,15 @@ class Builder {
       });
   }
   
+  List<String> _getAllFiles() {
+    var cwd = new Directory.current();
+    print("getAllFiles: ${cwd.path}");
+    var lister = cwd.list(recursive: false);
+    lister.onDir = (d) {
+      print("dir: $d");
+    };
+    return [];
+  }
   
   /** Creates the output and gen directories */
   Future _createDirs() => 

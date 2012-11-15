@@ -7,6 +7,7 @@ library client;
 import 'package:buildtool/buildtool.dart';
 import 'package:buildtool/src/common.dart';
 import 'package:buildtool/src/utils.dart';
+import 'package:buildtool/src/common.dart';
 import 'dart:io';
 import 'dart:json';
 
@@ -14,10 +15,10 @@ void clientMain(args) {
   var changedFiles = args['changed'];
   var filteredFiles = changedFiles.filter((f) => 
       !(f.startsWith('out') || f == '.buildlog' || f == '.buildlock'));
-  if (filteredFiles.isEmpty) {
-    print("no changed files");
-    exit(0);
-  }
+//  if (filteredFiles.isEmpty) {
+//    print("no changed files");
+//    exit(0);
+//  }
   
   _getServerPort().then((port) {
     if (port != null) {
