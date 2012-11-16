@@ -2,7 +2,7 @@
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE file.
 
-library web_components;
+library dwc_task;
 
 import 'dart:io';
 import 'package:buildtool/buildtool.dart';
@@ -24,13 +24,14 @@ class WebComponentsTask extends Task {
       List<dwc.CompilerResult> results = futures.map((f) => f.value);
       return new TaskResult(
           results.every((r) => r.success), 
-          flatMap(results, (result) => result.outputs.map((f) => new Path(f))),
-          flatMap(results, (result) => result.messages));
+          _flatMap(results, (result) => result.outputs.map((f) => new Path(f))),
+          _flatMap(results, (result) => result.messages));
     });
   }
 }
 
-List flatMap(List l, f) {
+// TODO(justinfagnani): replace with Iterable.expand() when it's available
+List _flatMap(List l, f) {
   var result = [];
   l.forEach((i) => result.addAll(f(i)));
   return result;

@@ -21,24 +21,29 @@ class Builder {
     _tasks.add(new _TaskEntry(files, task));
   }
   
-  /** Start the builder.
-   *  If [cleanBuild] is true, the output and gen directories are cleaned
-   *  before any tasks are run.
+  /** 
+   * Start the builder.
+   * If [cleanBuild] is true, the output and gen directories are cleaned
+   * before any tasks are run.
    *  
-   *  TODO(justinfagnani): Currently [removedFiles] are not passed to tasks.
+   * TODO(justinfagnani): Currently [removedFiles] are not passed to tasks.
    */
   Future build(
       List<String> changedFiles,
       List<String> removedFiles,
       bool cleanBuild) {
+    
     _logger.info("Starting build...");
     
     // ignore inputs in the ouput dir that the Editor forwards
-    var filteredFiles = changedFiles.filter((f) => !f.startsWith(outDir.toString()));
+    var filteredFiles = 
+        changedFiles.filter((f) => !f.startsWith(outDir.toString()));
     
-    return Futures.wait([
-        _createLogFile(),
-        (cleanBuild) ? _clean() : new Future.immediate(null)])
+    var initTasks = [_createLogFile()];
+    if (cleanBuild) {
+      initTasks.addAll([_cleanDir(outDir), _cleanDir(genDir)]);
+    }
+    return Futures.wait(initTasks)
       .chain((_) => _createDirs())
       .chain((_) {
         var futures = [];
@@ -65,85 +70,52 @@ class Builder {
     });
   }
   
-  /** Cleans the output and gen directories */
-  Future _clean() => 
-      Futures.wait([_cleanDir(outDir), _cleanDir(genDir)]);
-
   /** Creates the output and gen directories */
   Future _createDirs() => 
       Futures.wait([_createBuildDir(outDir), _createGenDir(genDir)]);
 
   /** Creates the output directory and adds a packages/ symlink */
   Future _createBuildDir(Path buildDirPath) {
-    var completer = new Completer();
     var dir = new Directory.fromPath(buildDirPath);
-    dir.exists().then((exists) {
+    
+    return dir.exists().chain((exists) {
       var create = (exists) ? new Future.immediate(true) : dir.create();
-      create.then((_) {
+      return create.chain((_) {
         // create pub symlink
         var buildDirPackagePath = buildDirPath.append('packages');
         var projectPackagePath = new Path('packages');
-        symlink(buildDirPackagePath, projectPackagePath).then((s) {
-          completer.complete(s);
-        });
+        return createSymlink(buildDirPackagePath, projectPackagePath);
       });
     });
-    return completer.future;
   }
 
   /** Creates the gen directory */
   Future<bool> _createGenDir(Path buildDirPath) {
-    var completer = new Completer();
     var dir = new Directory.fromPath(buildDirPath);
-    dir.exists().then((exists) {
-      if (exists) {
-        completer.complete(true);
-      } else {
-        dir.create().then((_) {
-        completer.complete(true);
-        });
-      }
-    });
-    return completer.future;
+    return dir.exists().chain((exists) =>
+        (exists) 
+            ? new Future.immediate(true) 
+            : dir.create().transform((_) => true));
   }
   
   /** Cleans the given directory */
   Future<bool> _cleanDir(Path dirPath) {
-    var completer = new Completer();
     var dir = new Directory.fromPath(dirPath);
-    dir.exists().then((exists) {
-      if (!exists) {
-        completer.complete(false);
-      } else {
-        var futures = [];
-        dir.list(recursive: false)
-          ..onFile = (path) {
-            futures.add(new File.fromPath(new Path.fromNative(path)).delete());
-          }
-          ..onDir = (path) {
-            futures.add(new Directory.fromPath(new Path.fromNative(path))
-                .delete(recursive: true));          
-          };
-        Futures.wait(futures).then((_) {
-          completer.complete(true);
-        });
-      }
-    });
-    return completer.future;
-  }
-  
-  Future _makeGenDir() {
+    return dir.exists().chain((exists) =>
+        (exists)
+            ? dir.delete(recursive: true).transform((_) => true)
+            : new Future.immediate(false));
   }
 }
 
 class _TaskEntry {
   final List<String> files;
   final Task task;
-  List<RegExp> patterns;
+  final List<RegExp> patterns;
   
-  _TaskEntry(this.files, this.task) {
-    patterns = files.map((f) => new RegExp(f));
-  }
+  _TaskEntry(files, this.task) 
+      : files = files, 
+        patterns = files.map((f) => new RegExp(f));
   
   bool matches(String filename) => patterns.some((p) => p.hasMatch(filename));
 }

@@ -1,9 +1,13 @@
+// Copyright (c) 2012, the Dart project authors.  Please see the AUTHORS file
+// for details. All rights reserved. Use of this source code is governed by a
+// BSD-style license that can be found in the LICENSE file.
+
 library builder_test;
 
 import 'dart:io';
 import 'package:unittest/unittest.dart';
 import 'package:buildtool/buildtool.dart';
-import 'test_task.dart';
+import 'mock_task.dart';
 
 main() {
   var outPath = new Path('test/data/output');
@@ -18,7 +22,7 @@ main() {
   });
 
   test('basic', () {
-    var task = new TestTask();
+    var task = new MockTask();
     // set the global builder variable 
     builder = new Builder(outPath, genPath);
 

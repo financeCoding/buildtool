@@ -1,9 +1,13 @@
+// Copyright (c) 2012, the Dart project authors.  Please see the AUTHORS file
+// for details. All rights reserved. Use of this source code is governed by a
+// BSD-style license that can be found in the LICENSE file.
+
 library builder_test;
 
 import 'dart:io';
 import 'package:unittest/unittest.dart';
 import 'package:buildtool/buildtool.dart';
-import 'test_task.dart';
+import 'mock_task.dart';
 
 main() {
   var outPath = new Path('test/data/output');
@@ -18,7 +22,7 @@ main() {
   });
   
   test('basic', () {
-    var task = new TestTask();
+    var task = new MockTask();
     
     var builder = new Builder(outPath, genPath);
     builder.addTask([".*\.html"], task);
@@ -29,6 +33,7 @@ main() {
       expect(new Directory.fromPath(genPath).existsSync(), true);
       
       // must convert Paths to Strings for equality
+      // TODO(justinfagnani): remove conversion when dartbug.com/6755 is fixed
       expect(task.files.map(_toString), [testPath].map(_toString));
       expect(task.outDir, outPath);
       expect(task.genDir, genPath);
@@ -37,17 +42,3 @@ main() {
 }
 
 String _toString(o) => o.toString();
-
-class TestTask implements Task {
-  List<Path> files;
-  Path outDir;
-  Path genDir;
-  
-  Future<TaskResult> run(List<Path> files, Path outDir, Path genDir) {
-    print("files: $files");
-    this.files = files;
-    this.outDir = outDir;
-    this.genDir = genDir;
-    return new Future.immediate(new TaskResult(true, [], []));
-  }
-}

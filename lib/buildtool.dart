@@ -2,18 +2,46 @@
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE file.
 
+/**
+ * buildtool is a simple build system for Dart that works well standalone or 
+ * with the Dart Editor. buildtool configurations are simple Dart scripts.
+ * 
+ * ## Usage ##
+ * 
+ * Call [addTask] with a list of regexs for matching file names and a task to
+ * run when files matching the regex change.
+ * 
+ * Example:
+ * [:main() {
+ *   addTask([".*\.html"], new WebComponentsTask());
+ *   buildWithArgs(new Options().arguments);
+ * }:]
+ * 
+ * Optionally a task may provide a function that adds a task:
+ * 
+ * [:import 'package:buildtool/web_components.dart';
+ * 
+ * main() {
+ *   webComponents(files: [".*\.html"]);
+ *   buildWithArgs(new Options().arguments);
+ * }:]
+ * 
+ * ## Warning ##
+ * 
+ * This library is extremely new and unfinished. It may change at any time.
+ */
 library buildtool;
 
 import 'dart:io';
 import 'package:args/args.dart';
 import 'package:logging/logging.dart';
 
-part 'builder.dart';
-part 'symlink.dart';
+part 'src/builder.dart';
+part 'src/symlink.dart';
 
-Logger _logger = new Logger("buildtool");
+final Logger _logger = new Logger("buildtool");
 
-Builder builder = new Builder(new Path('build-out'), new Path('packages/_gen'));
+Builder builder = new Builder(new Path('out'), new Path('packages/gen'));
 
 /** A runnable build task */
 abstract class Task {
@@ -34,7 +62,7 @@ class TaskResult {
   final List<Path> outputs;
   final List<String> messages;
   TaskResult(this.succeeded, this.outputs, this.messages);
-  String toString() => "succeeded: $succeeded outs: $outputs";
+  String toString() => "#<TaskResult succeeded: $succeeded outs: $outputs>";
 }
 
 /**
