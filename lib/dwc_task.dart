@@ -9,9 +9,9 @@ import 'package:buildtool/buildtool.dart';
 import 'package:web_components/dwc.dart' as dwc;
 
 void compileWebComponents({String name, List<String> files}) =>
-    addTask(files, new WebComponentsTask());
+    addTask(files, new DwcTask());
 
-class WebComponentsTask extends Task {
+class DwcTask extends Task {
   
   Future<TaskResult> run(List<Path> files, Path outDir, Path genDir) {
     var futures = <Future<dwc.CompilerResult>>[];

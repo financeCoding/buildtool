@@ -12,19 +12,22 @@
  * run when files matching the regex change.
  * 
  * Example:
- * [:main() {
- *   addTask([".*\.html"], new WebComponentsTask());
- *   buildWithArgs(new Options().arguments);
- * }:]
  * 
- * Optionally a task may provide a function that adds a task:
+ *     main() {
+ *       addTask([".*\.html"], new WebComponentsTask());
+ *       buildWithArgs(new Options().arguments);
+ *     }
  * 
- * [:import 'package:buildtool/web_components.dart';
+ * For convenience, we recommend that developers providing tasks for their
+ * tools to also provide a function that helps users register them, so for
+ * example a user can simple install a task as follows:
  * 
- * main() {
- *   webComponents(files: [".*\.html"]);
- *   buildWithArgs(new Options().arguments);
- * }:]
+ *     import 'package:buildtool/web_components.dart';
+ *     
+ *     main() {
+ *       webComponents(files: [".*\.html"]);
+ *       buildWithArgs(new Options().arguments);
+ *     }
  * 
  * ## Warning ##
  * 
