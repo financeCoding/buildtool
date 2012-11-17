@@ -8,6 +8,7 @@ library builder;
 import 'dart:io';
 import 'package:buildtool/glob.dart';
 import 'package:buildtool/src/symlink.dart';
+import 'package:buildtool/src/utils.dart';
 import 'package:buildtool/task.dart';
 import 'package:logging/logging.dart';
 
@@ -43,7 +44,13 @@ class Builder {
       bool cleanBuild) {
     
     _logger.info("Starting build...");
+
+//    var filteredFiles = [];    
+    var getChangedFiles = (changedFiles.isEmpty && removedFiles.isEmpty)
+        ? _getAllFiles()
+        : new Future.immediate(changedFiles);
     
+//<<<<<<< HEAD
 //    if (changedFiles.isEmpty && removedFiles.isEmpty) {
 //      changedFiles = _getAllFiles();
 //    }
@@ -53,12 +60,21 @@ class Builder {
         changedFiles.filter((f) => !f.startsWith(outDir.toString()));
     
     var initTasks = [];
+//=======
+//    getChangedFiles.then((files) { 
+//      // ignore inputs in the ouput dir that the Editor forwards
+//      filteredFiles = files.filter((f) => !f.startsWith(outDir.toString()));
+//    });
+//
+//    var initTasks = [_createLogFile(), getChangedFiles];
+////>>>>>>> read all files
     if (cleanBuild) {
       initTasks.addAll([_cleanDir(outDir), _cleanDir(genDir)]);
     }
     return Futures.wait(initTasks)
       .chain((_) => _createDirs())
       .chain((_) {
+        print(filteredFiles);
         var futures = [];
         for (var entry in _tasks) { // TODO: parallelize
           var matches = filteredFiles.filter(entry.matches);
@@ -73,14 +89,25 @@ class Builder {
       });
   }
   
-  List<String> _getAllFiles() {
-    var cwd = new Directory.current();
-    print("getAllFiles: ${cwd.path}");
-    var lister = cwd.list(recursive: false);
-    lister.onDir = (d) {
-      print("dir: $d");
-    };
-    return [];
+  Future<List<String>> _getAllFiles() {
+    var cwd = new Directory.current().path;
+    print("cwd: $cwd ${cwd.length}");
+    var futureGroup = new FutureGroup();
+    var files = <String>[];
+    onDir(String dir) {
+      print("dir: $dir");
+      if (!dir.endsWith("packages")) {
+        var completer = new Completer();
+        futureGroup.add(completer.future);
+        new Directory(dir).list()
+          ..onFile = (file) { files.add(file.substring(cwd.length + 1)); }
+          ..onDir = onDir
+          ..onDone = (s) { completer.complete(s); }
+          ..onError = (e) { completer.complete(false); };
+      }
+    }
+    onDir('web');
+    return futureGroup.future.transform((_) => files);
   }
   
   /** Creates the output and gen directories */
