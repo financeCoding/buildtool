@@ -2,7 +2,16 @@
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE file.
 
-part of buildtool;
+
+library builder;
+
+import 'dart:io';
+import 'package:buildtool/glob.dart';
+import 'package:buildtool/src/symlink.dart';
+import 'package:buildtool/task.dart';
+import 'package:logging/logging.dart';
+
+Logger _logger = new Logger('builder');
 
 /** A runnable build configuration */
 class Builder {
@@ -18,6 +27,7 @@ class Builder {
    * match against the regex patterns in [files].
    */
   void addTask(List<String> files, Task task) {
+    print("adding task $task");
     _tasks.add(new _TaskEntry(files, task));
   }
   
@@ -39,7 +49,7 @@ class Builder {
     var filteredFiles = 
         changedFiles.filter((f) => !f.startsWith(outDir.toString()));
     
-    var initTasks = [_createLogFile()];
+    var initTasks = [];
     if (cleanBuild) {
       initTasks.addAll([_cleanDir(outDir), _cleanDir(genDir)]);
     }
@@ -60,15 +70,6 @@ class Builder {
       });
   }
   
-  Future _createLogFile() {
-    return new File(".buildlog").create().transform((log) {
-      var logStream = log.openOutputStream(FileMode.APPEND);
-      _logger.on.record.add((LogRecord r) {
-        logStream.writeString(r.toString());
-      });
-      return true;
-    });
-  }
   
   /** Creates the output and gen directories */
   Future _createDirs() => 
@@ -83,8 +84,8 @@ class Builder {
       return create.chain((_) {
         // create pub symlink
         var buildDirPackagePath = buildDirPath.append('packages');
-        var projectPackagePath = new Path('packages');
-        return createSymlink(buildDirPackagePath, projectPackagePath);
+        var projectPackagePath = new Path('../packages');
+        return createSymlink(projectPackagePath, buildDirPackagePath);
       });
     });
   }

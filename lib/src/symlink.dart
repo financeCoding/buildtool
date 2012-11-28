@@ -2,7 +2,12 @@
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE file.
 
-part of buildtool;
+library symlink;
+
+import 'dart:io';
+import 'package:logging/logging.dart';
+
+Logger _logger = new Logger('symlink');
 
 // TODO(justinfagnani): this code was taken from dwc, from Pub's io library.
 // Added error handling and don't return the file result, to match the code
