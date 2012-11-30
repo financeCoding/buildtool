@@ -9,6 +9,7 @@ import 'dart:isolate';
 import 'dart:json';
 import 'package:buildtool/buildtool.dart';
 import 'package:buildtool/src/builder.dart';
+import 'package:buildtool/src/common.dart';
 import 'package:buildtool/src/utils.dart';
 import 'package:logging/logging.dart';
 
@@ -22,9 +23,9 @@ serverMain() {
     _logger.info("listening on localhost:${serverSocket.port}");
     var server = new HttpServer();
     
-    server.addRequestHandler((req) => req.path == '/build', _buildHandler);
-    server.addRequestHandler((req) => req.path == '/close', _closeHandler);
-    server.addRequestHandler((req) => req.path == '/status', _statusHandler);
+    server.addRequestHandler((req) => req.path == BUILD_URL, _buildHandler);
+    server.addRequestHandler((req) => req.path == CLOSE_URL, _closeHandler);
+    server.addRequestHandler((req) => req.path == STATUS_URL, _statusHandler);
 
     server.listenOn(serverSocket);
     _writeLockFile(serverSocket.port).then((int port) {
@@ -47,10 +48,12 @@ void _buildHandler(HttpRequest req, HttpResponse res) {
 }
 
 void _closeHandler(HttpRequest req, HttpResponse res) {
-  res.contentLength = 0;
-  res.outputStream.close();    
-  new Timer(0, (t) {
-    exit(0);
+  Futures.wait([_deleteLockFile(), _closeLogFile()]).then((_) {
+    res.contentLength = 0;
+    res.outputStream.close();    
+    new Timer(0, (t) {
+      exit(0);
+    });
   });
 }
 
@@ -78,7 +81,7 @@ void _statusHandler(HttpRequest req, HttpResponse res) {
  * them.
  */
 Future<int> _writeLockFile(int port) {
-  var lockFile = new File('.buildlock');
+  var lockFile = new File(BUILDLOCK_FILE);
   return lockFile.exists().chain((exists) {
     var serverPort = port;
     if (exists) {
@@ -117,22 +120,36 @@ Future<int> _writeLockFile(int port) {
   });
 }
 
+Future _deleteLockFile() {
+  return new File(BUILDLOCK_FILE).delete();
+}
+
+var _logStream;
+
 Future _createLogFile() {
-  return new File(".buildlog").create().transform((log) {
-    var logStream = log.openOutputStream(FileMode.APPEND);
+  return new File(BUILDLOG_FILE).create().transform((log) {
+    _logStream = log.openOutputStream(FileMode.APPEND);
     Logger.root.on.record.add((LogRecord r) {
       var m = "${r.time} ${r.level} ${r.message}\n";
-      logStream.writeString(m);
+      _logStream.writeString(m);
       print(m);
     });
     return true;
   });
 }
 
+Future _closeLogFile() {
+  if (_logStream != null) {
+    return _logStream.close();
+  } else {
+    return new Future.immediate(null);
+  }
+}
+
 Future<bool> _pingServer(int port) {
   var completer = new Completer();
   var client = new HttpClient();
-  var conn = client.post("localhost", port, '/status')
+  var conn = client.post("localhost", port, STATUS_URL)
     ..onRequest = (req) {
       req.outputStream.close();
     }
