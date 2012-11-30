@@ -27,7 +27,6 @@ class Builder {
    * match against the regex patterns in [files].
    */
   void addTask(List<String> files, Task task) {
-    print("adding task $task");
     _tasks.add(new _TaskEntry(files, task));
   }
   

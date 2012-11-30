@@ -20,6 +20,18 @@ Logger _logger = new Logger('symlink');
 Future createSymlink(Path fromPath, Path toPath) {
   var from = fromPath.toNativePath();
   var to = toPath.toNativePath();
+  
+  if (new Directory.fromPath(toPath).existsSync()) {
+    // Packages directory already exists.
+    return new Future.immediate(null);
+  }
+
+  // A broken symlink works like a file
+  var toFile = new File.fromPath(toPath);
+  if (toFile.existsSync()) {
+    toFile.deleteSync();
+  }
+  
   var command = 'ln';
   var args = ['-s', from, to];
 

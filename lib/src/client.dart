@@ -15,6 +15,7 @@ void clientMain(args) {
       !(f.startsWith('out') || f == '.buildlog' || f == '.buildlock'));
   if (filteredFiles.isEmpty) {
     print("no changed files");
+    exit(0);
   }
   
   _getServerPort().then((port) {
@@ -26,8 +27,11 @@ void clientMain(args) {
   });
 }
 
+final int _CONNECTION_REFUSED = 61;
+
+/** Sends a JSON-formatted build command to the build server via HTTP POST. */
 _sendBuildCommand(int port, List<String> changedFiles, bool cleanBuild,
-                  {bool retry: false}) {
+                  {bool isRetry: false}) {
   var client = new HttpClient();
   var conn = client.post("localhost", port, '/build')
     ..onRequest = (req) {
@@ -36,22 +40,24 @@ _sendBuildCommand(int port, List<String> changedFiles, bool cleanBuild,
         'removed': [],
         'clean': cleanBuild,
       };
+      req.headers.contentType = JSON_TYPE;
       req.outputStream.writeString(JSON.stringify(data));
       req.outputStream.close();
     }
     ..onResponse = (res) {
       readStreamAsString(res.inputStream).then((str) {
         print("response from server: $str");
+        exit(1);
       });
     }
     ..onError = (SocketIOException e) {
       print("error: $e");
-      if (e.osError.errorCode == 61 && !retry) {
+      if (e.osError.errorCode == _CONNECTION_REFUSED && !isRetry) {
         //restart server
         print("restarting server");
         _startServer().then((port) {
           print("restarted server on port $port");
-          _sendBuildCommand(port, changedFiles, cleanBuild, retry: true);
+          _sendBuildCommand(port, changedFiles, cleanBuild, isRetry: true);
         });
       } else {
         exit(1);

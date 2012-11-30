@@ -72,6 +72,8 @@ bool _inConfigure = false;
 /**
  * Adds a new [Task] to this build which is run when files match against the
  * regex patterns in [files].
+ * 
+ * [addTask] can only be called from within the closure passed to [configure].
  */
 void addTask(List<String> files, Task task) {
   if (!_inConfigure) {
@@ -81,7 +83,10 @@ void addTask(List<String> files, Task task) {
 }
 
 /**
+ * Configures the build. In [configClosure], [addTask] can be called to add
+ * tasks to the build.
  * 
+ * [forceServer] is for debug and development purposes.
  */
 void configure(void configClosure(), {bool forceServer: false}) {
   _processArgs(forceServer);

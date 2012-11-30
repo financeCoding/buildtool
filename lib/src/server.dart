@@ -5,6 +5,7 @@
 library server;
 
 import 'dart:io';
+import 'dart:isolate';
 import 'dart:json';
 import 'package:buildtool/buildtool.dart';
 import 'package:buildtool/src/builder.dart';
@@ -20,24 +21,24 @@ serverMain() {
     var serverSocket = new ServerSocket("127.0.0.1", 0, 0);
     _logger.info("listening on localhost:${serverSocket.port}");
     var server = new HttpServer();
-    server.addRequestHandler((req) => req.path == '/build', buildHandler);
-    server.defaultRequestHandler = (req, res) {
-      print("req.path: ${req.path}");
-      res.contentLength = 0;
-      res.outputStream.close();
-    };
+    
+    server.addRequestHandler((req) => req.path == '/build', _buildHandler);
+    server.addRequestHandler((req) => req.path == '/close', _closeHandler);
+    server.addRequestHandler((req) => req.path == '/status', _statusHandler);
+
     server.listenOn(serverSocket);
-    _writeLockFile(serverSocket.port).then((_) {
+    _writeLockFile(serverSocket.port).then((int port) {
       stdout.writeString("buildtool server ready\n");
-      stdout.writeString("port: ${serverSocket.port}\n");
+      stdout.writeString("port: ${port}\n");
+      if (port != serverSocket.port) {
+        exit(0);
+      }
     });
   });
 }
 
-void buildHandler(HttpRequest req, HttpResponse res) {
-  print('build!');
+void _buildHandler(HttpRequest req, HttpResponse res) {
   readStreamAsString(req.inputStream).then((str) {
-    print(str);
     var data = JSON.parse(str);
     builder.build(data['changed'], data['removed'], data['clean']);
     res.contentLength = 0;
@@ -45,14 +46,75 @@ void buildHandler(HttpRequest req, HttpResponse res) {
   });
 }
 
-Future _writeLockFile(int port) {
-  var completer = new Completer();
+void _closeHandler(HttpRequest req, HttpResponse res) {
+  res.contentLength = 0;
+  res.outputStream.close();    
+  new Timer(0, (t) {
+    exit(0);
+  });
+}
+
+void _statusHandler(HttpRequest req, HttpResponse res) {
+  var data = {'status': 'OK'};
+  var str = JSON.stringify(data);
+  res.contentLength = str.length;
+  res.headers.contentType = JSON_TYPE;
+  res.outputStream.writeString(str);
+  res.outputStream.close();    
+}
+
+/** 
+ * Attempts to write a lock file containing [port].
+ * 
+ * If the lock file doesn't exist, it's created and the value passed to [port]
+ * is returned in the Future.
+ *  
+ * If the lock file already exists, tries to contact a server at the port in
+ * the lock file. If the server is alive, returns the port from the lock file.
+ * If the server isn't alive, the lock file is overwritten with [port].
+ * 
+ * Note: This isn't a failsafe locking mechanism. There are several race
+ * conditions present, but Dart needs some kind of mutex mechanism to solve
+ * them.
+ */
+Future<int> _writeLockFile(int port) {
   var lockFile = new File('.buildlock');
-  var os = lockFile.openOutputStream(FileMode.WRITE);
-  os.writeString("$port");
-  os.flush();
-  os.onNoPendingWrites = () => completer.complete(null);
-  return completer.future;
+  return lockFile.exists().chain((exists) {
+    var serverPort = port;
+    if (exists) {
+      return readStreamAsString(lockFile.openInputStream()).chain((str) {
+        var otherPort;
+        try {
+          otherPort = int.parse(str);
+        } on Error catch(e) {
+          // if we can't parse a port, create the lockfile
+          return new Future.immediate(true);
+        }
+        return _pingServer(otherPort).transform((responded) {
+          if (responded) {
+            // make sure we return the other server's port
+            port = otherPort;
+          }
+          // create lockfile if other server didn't respond
+          return !responded;
+        });
+      });
+    } else {
+      // create lockfile if it doesn't exist
+      return new Future.immediate(true);
+    }
+  }).chain((create) {
+    if (create) {
+      var completer = new Completer();
+      var os = lockFile.openOutputStream(FileMode.WRITE);
+      os.writeString("$port");
+      os.flush();
+      os.onNoPendingWrites = () => completer.complete(port);
+      return completer.future;
+    } else {
+      return new Future.immediate(port);
+    }
+  });
 }
 
 Future _createLogFile() {
@@ -65,4 +127,24 @@ Future _createLogFile() {
     });
     return true;
   });
+}
+
+Future<bool> _pingServer(int port) {
+  var completer = new Completer();
+  var client = new HttpClient();
+  var conn = client.post("localhost", port, '/status')
+    ..onRequest = (req) {
+      req.outputStream.close();
+    }
+    ..onResponse = (res) {
+      readStreamAsString(res.inputStream).then((str) {
+        var data = JSON.parse(str);
+        completer.complete((data is Map) && (data.containsKey('status') 
+            && data['status'] == 'OK'));        
+      });
+    }
+    ..onError = (SocketIOException e) {
+      completer.complete(false);
+    };
+  return completer.future;
 }

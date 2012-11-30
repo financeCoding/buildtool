@@ -6,6 +6,8 @@ library utils;
 
 import 'dart:io';
 
+final ContentType JSON_TYPE = new ContentType('application', 'json');
+
 Future<String> readStreamAsString(InputStream stream) {
   var completer = new Completer();
   var sb = new StringBuffer();
@@ -15,10 +17,8 @@ Future<String> readStreamAsString(InputStream stream) {
     sb.add(sis.read());
   }
   ..onClosed = () {
-      completer.complete(sb.toString());
+    completer.complete(sb.toString());
   }
-  ..onError = (e) {
-      completer.completeException(e);
-  };
+  ..onError = completer.completeException;
   return completer.future;
 }
