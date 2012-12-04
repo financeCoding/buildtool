@@ -15,7 +15,7 @@ Logger _logger = new Logger('symlink');
 // the relevant parts of runProcess. Note that it uses "cmd" to get the path
 // on Windows.
 /**
- * Creates a new symlink that creates an alias from [target] to [to].
+ * Creates a new symlink that creates an alias from [target] -> [to].
  */
 Future createSymlink(String target, String linkPath) {
   var command = 'ln';
@@ -43,13 +43,14 @@ Future createSymlink(String target, String linkPath) {
 }
 
 /**
- * Returns [true] [linkPath] is a directory, since symlinks act like directories.
- **/
+ * Returns [true] if [linkPath] is a directory, since symlinks act like
+ * directories.
+ */
 bool dirSymlinkExists(String linkPath) => new Directory(linkPath).existsSync();
 
 /** 
  * If [linkPath] is a file, deletes it, since broken symlinks act like a file.
- **/ 
+ */ 
 removeBrokenDirSymlink(String linkPath) {
   var toFile = new File(linkPath);
   if (toFile.existsSync()) {
