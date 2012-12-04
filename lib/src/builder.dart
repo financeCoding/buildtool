@@ -82,9 +82,12 @@ class Builder {
       var create = (exists) ? new Future.immediate(true) : dir.create();
       return create.chain((_) {
         // create pub symlink
-        var buildDirPackagePath = buildDirPath.append('packages');
-        var projectPackagePath = new Path('../packages');
-        return createSymlink(projectPackagePath, buildDirPackagePath);
+        var linkPath = buildDirPath.append('packages').toNativePath();
+        if (!dirSymlinkExists(linkPath)) {
+          removeBrokenDirSymlink(linkPath);
+          var targetPath = new File('packages').fullPathSync();
+          return createSymlink(targetPath, linkPath);
+        }
       });
     });
   }

@@ -31,7 +31,9 @@ serverMain() {
     _writeLockFile(serverSocket.port).then((int port) {
       stdout.writeString("buildtool server ready\n");
       stdout.writeString("port: ${port}\n");
+      stdout.close();
       if (port != serverSocket.port) {
+        _logger.info("Another server already running on port $port.");
         exit(0);
       }
     });
@@ -50,10 +52,8 @@ void _buildHandler(HttpRequest req, HttpResponse res) {
 void _closeHandler(HttpRequest req, HttpResponse res) {
   Futures.wait([_deleteLockFile(), _closeLogFile()]).then((_) {
     res.contentLength = 0;
-    res.outputStream.close();    
-    new Timer(0, (t) {
-      exit(0);
-    });
+    res.outputStream.close();
+    exit(0);
   });
 }
 
@@ -160,7 +160,7 @@ Future<bool> _pingServer(int port) {
             && data['status'] == 'OK'));        
       });
     }
-    ..onError = (SocketIOException e) {
+    ..onError = (e) {
       completer.complete(false);
     };
   return completer.future;

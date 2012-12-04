@@ -15,25 +15,11 @@ Logger _logger = new Logger('symlink');
 // the relevant parts of runProcess. Note that it uses "cmd" to get the path
 // on Windows.
 /**
- * Creates a new symlink that creates an alias from [from] to [to].
+ * Creates a new symlink that creates an alias from [target] to [to].
  */
-Future createSymlink(Path fromPath, Path toPath) {
-  var from = fromPath.toNativePath();
-  var to = toPath.toNativePath();
-  
-  if (new Directory.fromPath(toPath).existsSync()) {
-    // Packages directory already exists.
-    return new Future.immediate(null);
-  }
-
-  // A broken symlink works like a file
-  var toFile = new File.fromPath(toPath);
-  if (toFile.existsSync()) {
-    toFile.deleteSync();
-  }
-  
+Future createSymlink(String target, String linkPath) {
   var command = 'ln';
-  var args = ['-s', from, to];
+  var args = ['-s', target, linkPath];
 
   if (Platform.operatingSystem == 'windows') {
     // Call mklink on Windows to create an NTFS junction point. Only works on
@@ -42,7 +28,7 @@ Future createSymlink(Path fromPath, Path toPath) {
     // link (/d) because the latter requires some privilege shenanigans that
     // I'm not sure how to specify from the command line.
     command = 'cmd';
-    args = ['/c', 'mklink', '/j', to, from];
+    args = ['/c', 'mklink', '/j', linkPath, target];
   }
 
   return Process.run(command, args).transform((result) {
@@ -50,9 +36,23 @@ Future createSymlink(Path fromPath, Path toPath) {
       var details = 'subprocess stdout:\n${result.stdout}\n'
                     'subprocess stderr:\n${result.stderr}';
       _logger.severe(
-        'unable to create symlink\n from: $from\n to:$to\n$details');
+        'unable to create symlink\n from: $target\n to:$linkPath\n$details');
     }
     return null;
   });
 }
 
+/**
+ * Returns [true] [linkPath] is a directory, since symlinks act like directories.
+ **/
+bool dirSymlinkExists(String linkPath) => new Directory(linkPath).existsSync();
+
+/** 
+ * If [linkPath] is a file, deletes it, since broken symlinks act like a file.
+ **/ 
+removeBrokenDirSymlink(String linkPath) {
+  var toFile = new File(linkPath);
+  if (toFile.existsSync()) {
+    toFile.deleteSync();
+  }
+}
