@@ -5,6 +5,7 @@
 library client;
 
 import 'package:buildtool/buildtool.dart';
+import 'package:buildtool/src/common.dart';
 import 'package:buildtool/src/utils.dart';
 import 'dart:io';
 import 'dart:json';
