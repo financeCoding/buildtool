@@ -4,13 +4,14 @@
 
 library client;
 
+import 'package:args/args.dart';
 import 'package:buildtool/buildtool.dart';
 import 'package:buildtool/src/common.dart';
 import 'package:buildtool/src/utils.dart';
 import 'dart:io';
 import 'dart:json';
 
-void clientMain(args) {
+void clientMain(ArgResults args) {
   var quit = args['quit'];
   if (quit == true) {
     print("quitting server");
@@ -46,7 +47,7 @@ void clientMain(args) {
 final int _CONNECTION_REFUSED = 61;
 
 Future _sendCloseCommand(int port) {
-  return _sendJsonCommand(port, CLOSE_URL, data: {'foo': 'bar'});
+  return _sendJsonCommand(port, CLOSE_URL);
 }
 
 /** Sends a JSON-formatted build command to the build server via HTTP POST. */
@@ -77,10 +78,12 @@ Future _sendJsonCommand(int port, String path, {var data, bool isRetry: false}) 
       req.outputStream.close();
     }
     ..onResponse = (res) {
-      readStreamAsString(res.inputStream).then((str) {
-        var response = JSON.parse(str);
-        completer.complete(response);
-      });
+      readStreamAsString(res.inputStream)
+        ..then((str) {
+          var response = JSON.parse(str);
+          completer.complete(response);
+        })
+        ..handleException((e) => completer.completeException(e));
     }
     ..onError = (e) {
       print("error: $e");
@@ -89,11 +92,14 @@ Future _sendJsonCommand(int port, String path, {var data, bool isRetry: false}) 
           !isRetry) {
         //restart server
         print("restarting server");
-        _startServer().then((port) {
-          print("restarted server on port $port");
-          _sendJsonCommand(port, path, data: data, isRetry: true)
-              .then(completer.complete);
-        });
+        _startServer()
+          ..then((port) {
+            print("restarted server on port $port");
+            _sendJsonCommand(port, path, data: data, isRetry: true)
+               ..then(completer.complete)
+               ..handleException((e) => completer.completeException(e));
+          })
+          ..handleException((e) => completer.completeException(e));
       } else {
         completer.completeException(e);
       }
@@ -122,9 +128,7 @@ Future<int> _getServerPort() {
           }
         };
     } else { 
-      _startServer().then((port) {
-        completer.complete(port);
-      });
+      _startServer().then(completer.complete);
     }
   });
   return completer.future;

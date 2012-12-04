@@ -8,7 +8,6 @@ library builder;
 import 'dart:io';
 import 'package:buildtool/glob.dart';
 import 'package:buildtool/src/symlink.dart';
-import 'package:buildtool/src/utils.dart';
 import 'package:buildtool/task.dart';
 import 'package:logging/logging.dart';
 

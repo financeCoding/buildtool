@@ -64,7 +64,6 @@ import 'package:buildtool/glob.dart';
 import 'package:buildtool/src/client.dart';
 import 'package:buildtool/src/server.dart';
 import 'package:buildtool/task.dart';
-import 'package:buildtool/src/utils.dart';
 
 bool _isServer;
 var _args;
