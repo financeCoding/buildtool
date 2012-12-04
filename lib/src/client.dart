@@ -7,7 +7,6 @@ library client;
 import 'package:buildtool/buildtool.dart';
 import 'package:buildtool/src/common.dart';
 import 'package:buildtool/src/utils.dart';
-import 'package:buildtool/src/common.dart';
 import 'dart:io';
 import 'dart:json';
 
@@ -21,35 +20,59 @@ void clientMain(args) {
 //  }
   
   _getServerPort().then((port) {
-    if (port != null) {
-      _sendBuildCommand(port, filteredFiles, args['clean']);
+    var quit = args['quit'];
+    if (quit == true) {
+      _sendCloseCommand(port).then((s) {
+        exit(0);
+      });
     } else {
-      _startServer();
+      if (port != null) {
+        _sendBuildCommand(port, filteredFiles, args['clean']);
+      } else {
+        _startServer();
+      }
     }
   });
 }
 
 final int _CONNECTION_REFUSED = 61;
 
+Future _sendCloseCommand(int port) {
+  return _sendJsonRpc(port, '/build');
+}
+
 /** Sends a JSON-formatted build command to the build server via HTTP POST. */
-_sendBuildCommand(int port, List<String> changedFiles, bool cleanBuild,
-                  {bool isRetry: false}) {
+Future _sendBuildCommand(int port, List<String> changedFiles, bool cleanBuild) {
+  var data = {
+    'changed': changedFiles,
+    'removed': [],
+    'clean': cleanBuild,
+  };
+  return _sendJsonRpc(port, '/build', data: data);
+}
+
+/** 
+ * Sends a POST request to the server at path [path] with a JSON 
+ * representation of [data] as the request body. The response is parsed as JSON
+ * and returned via a Future
+ */
+Future _sendJsonRpc(int port, String path, {var data, bool isRetry: false}) {
+  var completer = new Completer();
   var client = new HttpClient();
-  var conn = client.post("localhost", port, '/build')
+  var conn = client.post("localhost", port, path)
     ..onRequest = (req) {
-      var data = {
-        'changed': changedFiles,
-        'removed': [],
-        'clean': cleanBuild,
-      };
       req.headers.contentType = JSON_TYPE;
-      req.outputStream.writeString(JSON.stringify(data));
+      if (data != null) {
+        var json = JSON.stringify(data);
+        req.contentLength = json.length;
+        req.outputStream.writeString(json);
+      }
       req.outputStream.close();
     }
     ..onResponse = (res) {
       readStreamAsString(res.inputStream).then((str) {
-        print("response from server: $str");
-        exit(1);
+        var response = JSON.parse(str);
+        completer.complete(response);
       });
     }
     ..onError = (SocketIOException e) {
@@ -59,12 +82,14 @@ _sendBuildCommand(int port, List<String> changedFiles, bool cleanBuild,
         print("restarting server");
         _startServer().then((port) {
           print("restarted server on port $port");
-          _sendBuildCommand(port, changedFiles, cleanBuild, isRetry: true);
+          _sendJsonRpc(port, path, data: data, isRetry: true)
+              .then(completer.complete);
         });
       } else {
-        exit(1);
+        completer.completeException(e);
       }
     };
+  return completer.future;
 }
 
 Future<int> _getServerPort() {
