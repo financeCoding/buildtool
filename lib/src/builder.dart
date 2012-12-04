@@ -44,37 +44,18 @@ class Builder {
       bool cleanBuild) {
     
     _logger.info("Starting build...");
-
-//    var filteredFiles = [];    
-    var getChangedFiles = (changedFiles.isEmpty && removedFiles.isEmpty)
-        ? _getAllFiles()
-        : new Future.immediate(changedFiles);
-    
-//<<<<<<< HEAD
-//    if (changedFiles.isEmpty && removedFiles.isEmpty) {
-//      changedFiles = _getAllFiles();
-//    }
     
     // ignore inputs in the ouput dir that the Editor forwards
     var filteredFiles = 
         changedFiles.filter((f) => !f.startsWith(outDir.toString()));
     
     var initTasks = [];
-//=======
-//    getChangedFiles.then((files) { 
-//      // ignore inputs in the ouput dir that the Editor forwards
-//      filteredFiles = files.filter((f) => !f.startsWith(outDir.toString()));
-//    });
-//
-//    var initTasks = [_createLogFile(), getChangedFiles];
-////>>>>>>> read all files
     if (cleanBuild) {
       initTasks.addAll([_cleanDir(outDir), _cleanDir(genDir)]);
     }
     return Futures.wait(initTasks)
       .chain((_) => _createDirs())
       .chain((_) {
-        print(filteredFiles);
         var futures = [];
         for (var entry in _tasks) { // TODO: parallelize
           var matches = filteredFiles.filter(entry.matches);
