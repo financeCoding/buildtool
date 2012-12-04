@@ -11,52 +11,59 @@ import 'dart:io';
 import 'dart:json';
 
 void clientMain(args) {
-  var changedFiles = args['changed'];
-  var filteredFiles = changedFiles.filter((f) => 
-      !(f.startsWith('out') || f == '.buildlog' || f == '.buildlock'));
-//  if (filteredFiles.isEmpty) {
-//    print("no changed files");
-//    exit(0);
-//  }
-  
-  _getServerPort().then((port) {
-    var quit = args['quit'];
-    if (quit == true) {
-      _sendCloseCommand(port).then((s) {
+  var quit = args['quit'];
+  if (quit == true) {
+    print("quitting server");
+    _getServerPort().then((port) {
+      if (port != null) {
+        _sendCloseCommand(port).then((s) {
+          exit(0);
+        });
+      } else {
+        print("no server to quit");
         exit(0);
-      });
-    } else {
+      }
+    });
+  } else {
+    var changedFiles = args['changed'];
+    var filteredFiles = changedFiles.filter((f) => 
+        !(f.startsWith('out') || f == '.buildlog' || f == '.buildlock'));
+    if (filteredFiles.isEmpty) {
+      print("no changed files");
+      exit(0);
+    }
+    _getServerPort().then((port) {
       if (port != null) {
         _sendBuildCommand(port, filteredFiles, args['clean']);
       } else {
-        _startServer();
+        print("Error starting buildtool server.");
+        exit(1);
       }
-    }
-  });
+    });
+  }
 }
 
 final int _CONNECTION_REFUSED = 61;
 
 Future _sendCloseCommand(int port) {
-  return _sendJsonRpc(port, '/build');
+  return _sendJsonCommand(port, CLOSE_URL, data: {'foo': 'bar'});
 }
 
 /** Sends a JSON-formatted build command to the build server via HTTP POST. */
 Future _sendBuildCommand(int port, List<String> changedFiles, bool cleanBuild) {
-  var data = {
+  return _sendJsonCommand(port, BUILD_URL, data: {
     'changed': changedFiles,
     'removed': [],
     'clean': cleanBuild,
-  };
-  return _sendJsonRpc(port, '/build', data: data);
+  });
 }
 
-/** 
- * Sends a POST request to the server at path [path] with a JSON 
+/**
+ * Sends a POST request to the server at path [path] with a JSON
  * representation of [data] as the request body. The response is parsed as JSON
  * and returned via a Future
  */
-Future _sendJsonRpc(int port, String path, {var data, bool isRetry: false}) {
+Future _sendJsonCommand(int port, String path, {var data, bool isRetry: false}) {
   var completer = new Completer();
   var client = new HttpClient();
   var conn = client.post("localhost", port, path)
@@ -75,14 +82,16 @@ Future _sendJsonRpc(int port, String path, {var data, bool isRetry: false}) {
         completer.complete(response);
       });
     }
-    ..onError = (SocketIOException e) {
+    ..onError = (e) {
       print("error: $e");
-      if (e.osError.errorCode == _CONNECTION_REFUSED && !isRetry) {
+      if (e is SocketIOException && 
+          e.osError.errorCode == _CONNECTION_REFUSED &&
+          !isRetry) {
         //restart server
         print("restarting server");
         _startServer().then((port) {
           print("restarted server on port $port");
-          _sendJsonRpc(port, path, data: data, isRetry: true)
+          _sendJsonCommand(port, path, data: data, isRetry: true)
               .then(completer.complete);
         });
       } else {

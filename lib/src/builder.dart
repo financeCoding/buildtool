@@ -70,27 +70,6 @@ class Builder {
       });
   }
   
-  Future<List<String>> _getAllFiles() {
-    var cwd = new Directory.current().path;
-    print("cwd: $cwd ${cwd.length}");
-    var futureGroup = new FutureGroup();
-    var files = <String>[];
-    onDir(String dir) {
-      print("dir: $dir");
-      if (!dir.endsWith("packages")) {
-        var completer = new Completer();
-        futureGroup.add(completer.future);
-        new Directory(dir).list()
-          ..onFile = (file) { files.add(file.substring(cwd.length + 1)); }
-          ..onDir = onDir
-          ..onDone = (s) { completer.complete(s); }
-          ..onError = (e) { completer.complete(false); };
-      }
-    }
-    onDir('web');
-    return futureGroup.future.transform((_) => files);
-  }
-  
   /** Creates the output and gen directories */
   Future _createDirs() => 
       Futures.wait([_createBuildDir(outDir), _createGenDir(genDir)]);
