@@ -80,10 +80,7 @@ Future _sendJsonCommand(int port, String path, {var data,
     }
     ..onResponse = (res) {
       readStreamAsString(res.inputStream)
-        ..handleException((e) {
-          completer.completeException(e);
-          return true;
-        })
+        ..handleException((e) => completer.completeException(e))
         ..then((str) {
           var response = JSON.parse(str);
           completer.complete(response);
@@ -97,18 +94,12 @@ Future _sendJsonCommand(int port, String path, {var data,
         //restart server
         print("restarting server");
         _startServer()
-          ..handleException((e) {
-            completer.completeException(e);
-            return true;
-          })
+          ..handleException((e) => completer.completeException(e))
           ..then((port) {
             print("restarted server on port $port");
             _sendJsonCommand(port, path, data: data, isRetry: true)
-              ..handleException((e) {
-                completer.completeException(e);
-                return true;
-              })
-              ..then(completer.complete);
+              ..handleException((e) => completer.completeException(e))
+               ..then(completer.complete);
           });
       } else {
         completer.completeException(e);
