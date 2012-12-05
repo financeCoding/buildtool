@@ -64,7 +64,8 @@ Future _sendBuildCommand(int port, List<String> changedFiles, bool cleanBuild) {
  * representation of [data] as the request body. The response is parsed as JSON
  * and returned via a Future
  */
-Future _sendJsonCommand(int port, String path, {var data, bool isRetry: false}) {
+Future _sendJsonCommand(int port, String path, {var data, 
+    bool isRetry: false}) {
   var completer = new Completer();
   var client = new HttpClient();
   var conn = client.post("localhost", port, path)
@@ -79,11 +80,11 @@ Future _sendJsonCommand(int port, String path, {var data, bool isRetry: false}) 
     }
     ..onResponse = (res) {
       readStreamAsString(res.inputStream)
+        ..handleException((e) => completer.completeException(e))
         ..then((str) {
           var response = JSON.parse(str);
           completer.complete(response);
-        })
-        ..handleException((e) => completer.completeException(e));
+        });
     }
     ..onError = (e) {
       print("error: $e");
@@ -93,13 +94,13 @@ Future _sendJsonCommand(int port, String path, {var data, bool isRetry: false}) 
         //restart server
         print("restarting server");
         _startServer()
+          ..handleException((e) => completer.completeException(e))
           ..then((port) {
             print("restarted server on port $port");
             _sendJsonCommand(port, path, data: data, isRetry: true)
-               ..then(completer.complete)
-               ..handleException((e) => completer.completeException(e));
-          })
-          ..handleException((e) => completer.completeException(e));
+              ..handleException((e) => completer.completeException(e))
+               ..then(completer.complete);
+          });
       } else {
         completer.completeException(e);
       }
