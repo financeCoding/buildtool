@@ -4,9 +4,7 @@
 
 library utils;
 
-import 'dart:isolate';
 import 'dart:io';
-import 'package:/web_components/src/utils.dart';
 export 'package:web_components/src/utils.dart' show FutureGroup;
 
 Future<String> readStreamAsString(InputStream stream) {

@@ -110,7 +110,8 @@ void _processArgs(bool forceServer) {
         allowMultiple: true)
     ..addFlag("clean", negatable: false, help: "remove any build artifacts")
     ..addFlag("machine", negatable: false, 
-        help: "buildtool was run from the editor")
+        help: "print machine parseable messages," 
+              "used by tools like the Dart editor")
     ..addFlag("quit", negatable: false, help: "quit the build server")
     ..addFlag("help", negatable: false, help: "displays this help and exit");
   _args = parser.parse(new Options().arguments);
