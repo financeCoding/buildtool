@@ -109,7 +109,8 @@ void _processArgs(bool forceServer) {
     ..addOption("removed", help: "the file was removed since the last build",
         allowMultiple: true)
     ..addFlag("clean", negatable: false, help: "remove any build artifacts")
-    ..addFlag("machine", negatable: false, help: "buildtool was run from the editor")
+    ..addFlag("machine", negatable: false, 
+        help: "buildtool was run from the editor")
     ..addFlag("quit", negatable: false, help: "quit the build server")
     ..addFlag("help", negatable: false, help: "displays this help and exit");
   print(new Options().arguments);
