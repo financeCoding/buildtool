@@ -45,6 +45,7 @@ void _buildHandler(HttpRequest req, HttpResponse res) {
   ..handleException((e) {
     _logger.severe("error: $e");
     _jsonReply(res, {'status': 'ERROR', 'error': "$e"});
+    return true;
   })
   ..then((str) {
     var data = JSON.parse(str);
@@ -52,6 +53,7 @@ void _buildHandler(HttpRequest req, HttpResponse res) {
       ..handleException((e) {
         _logger.severe("error: $e");
         _jsonReply(res, {'status': 'ERROR', 'error': "$e"});
+        return true;
       })
       ..then((s) {
         _jsonReply(res, {'status': 'OK'});
@@ -61,13 +63,23 @@ void _buildHandler(HttpRequest req, HttpResponse res) {
 
 void _closeHandler(HttpRequest req, HttpResponse res) {
   print("closing server... ");
-  Futures.wait([_deleteLockFile(), _closeLogFile()]).then((_) {
-    res.outputStream.onClosed = () {
-      print("closed");
-      exit(0);
-    };
-    _jsonReply(res, {'status': 'CLOSED'});
-  });
+  Futures.wait([_deleteLockFile(), _closeLogFile()])
+    ..handleException((e) {
+      res.outputStream.onClosed = () {
+        print("closed");
+        exit(0);
+      };
+      _logger.severe("error: $e");
+      _jsonReply(res, {'status': 'CLOSED', 'error': "$e"});
+      return true;
+    })
+    ..then((_) {
+      res.outputStream.onClosed = () {
+        print("closed");
+        exit(0);
+      };
+      _jsonReply(res, {'status': 'CLOSED'});
+    });
 }
 
 void _statusHandler(HttpRequest req, HttpResponse res) {

@@ -118,19 +118,14 @@ class Builder {
   
   Future<List<String>> _getAllFiles() {
     var cwd = new Directory.current().path;
-    print("_getAllFiles cwd: $cwd ${cwd.length}");
     var futureGroup = new FutureGroup();
     var files = <String>[];
     onDir(String dir) {
-      print("dir: $dir");
       if (!dir.endsWith("packages")) {
         var completer = new Completer();
         futureGroup.add(completer.future);
         new Directory(dir).list()
-        ..onFile = (file) {
-          print("file: $file");
-          files.add(file.substring(cwd.length + 1));
-        }
+        ..onFile = (file) { files.add(file.substring(cwd.length + 1)); }
         ..onDir = onDir
         ..onDone = (s) { completer.complete(null); }
         ..onError = (e) { completer.completeException(e); };

@@ -113,7 +113,6 @@ void _processArgs(bool forceServer) {
         help: "buildtool was run from the editor")
     ..addFlag("quit", negatable: false, help: "quit the build server")
     ..addFlag("help", negatable: false, help: "displays this help and exit");
-  print(new Options().arguments);
   _args = parser.parse(new Options().arguments);
   _isServer = forceServer || _args['server'];
   if (_args["help"]) {
